@@ -1,4 +1,4 @@
-# implementation of Rectified Flow for simple minded people like @cloneofsimo or like me.
+# implementation of Pi-Flow for simple minded people like @cloneofsimo or like me.
 # inspired and heavily based on: 
 # Cloneofsimo minRF: https://github.com/cloneofsimo/minRF/tree/main
 # PiFlow official: https://github.com/Lakonik/piFlow/tree/main
