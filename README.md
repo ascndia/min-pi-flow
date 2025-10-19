@@ -6,13 +6,14 @@ This repo provides a minimal implementation to reproduce flow matching distillat
 
 ---
 
-|                     Teacher (Flow Matching, NFE=50)             |                  Student (Pi-Flow, NFE=4)                  |
-| :-------------------------------------------------------------: | :--------------------------------------------------------: |
-|    ![](contents/mnist/NFE_4-K_8-iter_2/sample_teacher_fm.gif)   |    ![](contents/mnist/NFE_4-K_8-iter_2/sample_25_pi.gif)   |
-| ![](contents/mnist/NFE_4-K_8-iter_2/sample_teacher_fm_last.png) | ![](contents/mnist/NFE_4-K_8-iter_2/sample_25_pi_last.png) |
+**Teacher (Flow Matching, NFE=50)** | **Student (Pi-Flow, NFE=4)**
+:---: | :---:
+![Teacher FM](https://github.com/enkeejunior1/min-pi-flow/raw/main/contents/mnist/NFE_4-K_8-iter_2/sample_teacher_fm.gif) | ![Student Pi-Flow](https://github.com/enkeejunior1/min-pi-flow/raw/main/contents/mnist/NFE_4-K_8-iter_2/sample_25_pi.gif)
+![Teacher FM Last](https://github.com/enkeejunior1/min-pi-flow/raw/main/contents/mnist/NFE_4-K_8-iter_2/sample_teacher_fm_last.png) | ![Student Pi-Flow Last](https://github.com/enkeejunior1/min-pi-flow/raw/main/contents/mnist/NFE_4-K_8-iter_2/sample_25_pi_last.png)
 
+> The left shows the teacher flow matching results, and the right shows the distilled Pi-Flow results (NFE=4).
 
-### Simple Pi-Flow Training
+# Simple Pi-Flow Training
 
 Install torch torchvision einops tqdm (optional wandb)
 
@@ -37,7 +38,7 @@ python3 train.py --dataset cifar --NFE 4
 
 ---
 
-### Acknowledgments
+# Acknowledgments
 
 This implementation is inspired by and heavily based on:
 - [CloneofSimo's minRF](https://github.com/cloneofsimo/minRF/tree/main)
@@ -46,9 +47,9 @@ This implementation is inspired by and heavily based on:
 
 ---
 
-### Citation
+# Citation
 
-If you find this repo helpful and wise enough to cite it, please use the following bibtex:
+If you find this repo helpful and wise enough to cite this repo, please use the following bibtex:
 
 ```bibtex
 @misc{yong2024minpiflow,
