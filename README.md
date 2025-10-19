@@ -49,11 +49,30 @@ This implementation is inspired by and heavily based on:
 
 # Citation
 
+```bibtex
+@misc{piflow,
+      title={pi-Flow: Policy-Based Few-Step Generation via Imitation Distillation}, 
+      author={Hansheng Chen and Kai Zhang and Hao Tan and Leonidas Guibas and Gordon Wetzstein and Sai Bi},
+      year={2025},
+      eprint={2510.14974},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2510.14974}, 
+}
+
+@inproceedings{gmflow,
+  title={Gaussian Mixture Flow Matching Models},
+  author={Hansheng Chen and Kai Zhang and Hao Tan and Zexiang Xu and Fujun Luan and Leonidas Guibas and Gordon Wetzstein and Sai Bi},
+  booktitle={ICML},
+  year={2025},
+}
+```
+
 If you find this repo helpful and wise enough to cite this repo, please use the following bibtex:
 
 ```bibtex
 @misc{yong2024minpiflow,
-  author       = {Yong-Hyun Park},
+  author       = {Yong-Hyun Park, Mutian Tong, Jiatao Gu},
   title        = {minPiFlow: Minimal Implementation of Pi-flow},
   year         = 2025,
   publisher    = {GitHub},
