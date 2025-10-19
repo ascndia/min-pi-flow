@@ -6,8 +6,6 @@ This repo provides a minimal implementation to reproduce flow matching distillat
 
 > **⚠️ Warning**: This is an unofficial implementation and is still a work in progress. For the official implementation, please refer to the [Pi-Flow Official Repository](https://github.com/Lakonik/piFlow/tree/main).
 
----
-
 **Teacher (Flow Matching, NFE=50)** | **Student (Pi-Flow, NFE=4)**
 :---: | :---:
 ![Teacher FM](https://github.com/enkeejunior1/min-pi-flow/raw/main/contents/mnist/NFE_4-K_8-iter_2/sample_teacher_fm.gif) | ![Student Pi-Flow](https://github.com/enkeejunior1/min-pi-flow/raw/main/contents/mnist/NFE_4-K_8-iter_2/sample_25_pi.gif)
