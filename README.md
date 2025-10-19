@@ -2,7 +2,9 @@
 
 Minimal implementation of [**Pi-Flow**](https://arxiv.org/abs/2510.14974), distillation of flow matching for few-step generation.
 
-This repo provides a minimal implementation to reproduce flow matching distillation results with just 306LOCs + DiT codebase.
+This repo provides a minimal implementation to reproduce flow matching distillation results (306LOCs + DiT codebase).
+
+> **⚠️ Warning**: This is an unofficial implementation and is still a work in progress. For the official implementation, please refer to the [Pi-Flow Official Repository](https://github.com/Lakonik/piFlow/tree/main).
 
 ---
 
