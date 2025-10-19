@@ -1,0 +1,8 @@
+data
+__pycache__
+wandb
+*sample_*
+weights/
+logs/
+contents/cifar/
+weights/cifar/

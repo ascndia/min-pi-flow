@@ -1,0 +1,62 @@
+# min-Pi-Flow: Minimal Implementation of Pi-Flow
+
+Minimal implementation of [**Pi-Flow**](https://arxiv.org/abs/2510.14974), distillation of flow matching for few-step generation.
+
+This repo provides a minimal implementation to reproduce flow matching distillation results with just 306LOCs + DiT codebase.
+
+---
+
+|                     Teacher (Flow Matching, NFE=50)             |                  Student (Pi-Flow, NFE=4)                  |
+| :-------------------------------------------------------------: | :--------------------------------------------------------: |
+|    ![](contents/mnist/NFE_4-K_8-iter_2/sample_teacher_fm.gif)   |    ![](contents/mnist/NFE_4-K_8-iter_2/sample_25_pi.gif)   |
+| ![](contents/mnist/NFE_4-K_8-iter_2/sample_teacher_fm_last.png) | ![](contents/mnist/NFE_4-K_8-iter_2/sample_25_pi_last.png) |
+
+
+### Simple Pi-Flow Training
+
+Install torch torchvision einops tqdm (optional wandb)
+
+```bash
+conda create -n piflow python=3.11 -y
+conda activate piflow
+pip install uv 
+uv pip install torch torchvision einops tqdm
+```
+
+Run
+
+```bash
+# MNIST (NFE=4)
+python3 train.py --dataset mnist --NFE 4 
+
+# CIFAR-10 (NFE=8)
+python3 train.py --dataset cifar --NFE 4
+```
+
+> Note: training with NFE=1 tends to be unstable.
+
+---
+
+### Acknowledgments
+
+This implementation is inspired by and heavily based on:
+- [CloneofSimo's minRF](https://github.com/cloneofsimo/minRF/tree/main)
+- [Pi-Flow Official Implementation](https://github.com/Lakonik/piFlow/tree/main)
+
+
+---
+
+### Citation
+
+If you find this repo helpful and wise enough to cite it, please use the following bibtex:
+
+```bibtex
+@misc{yong2024minpiflow,
+  author       = {Yong-Hyun Park},
+  title        = {minPiFlow: Minimal Implementation of Pi-flow},
+  year         = 2025,
+  publisher    = {GitHub},
+  url          = {https://github.com/enkeejunior1/min-pi-flow},
+}
+```
+
