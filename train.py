@@ -86,7 +86,7 @@ class PiFlow:
         loss = 0
         for iter_i in range(1, iter+1):
             t = s - 1 / self.NFE * (iter_i / iter)
-            t = t.clamp(2*eps, 1).to(z0.device)
+            t = t.clamp(eps, 1).to(z0.device)
             with torch.no_grad():
                 zt = self.from_s_to_t(zs, s, t, cond, pi_D)
                 vt = self.teacher_model(zt, t, cond)
@@ -115,7 +115,7 @@ class PiFlow:
 
             for iter_i in range(1, iter+1):
                 t = s - 1 / self.NFE * (iter_i / iter)
-                t = t.clamp(2*eps, 1).to(z0.device)
+                t = t.clamp(eps, 1).to(z0.device)
                 with torch.no_grad():
                     zt = self.from_s_to_t(zs, s, t, cond, pi_D)
                     vt = self.teacher_model(zt, t, cond)
@@ -124,6 +124,7 @@ class PiFlow:
 
             # update zs (s -> t)
             zs = self.from_s_to_t(zs, s, s-1/self.NFE, cond, pi_D).detach()
+            s = s - 1 / self.NFE
         loss = loss / iter / self.NFE
         return loss
 
