@@ -95,6 +95,38 @@ class PiFlow:
         loss = loss / iter
         return loss
 
+    def forward_pi_data_free(self, z0=None, cond=None, iter=2, eps=1e-4):
+        """
+        Algorithm 3
+        """
+        b = z0.size(0)
+        s = torch.randint(1, self.NFE + 1, (b,)).to(z0.device) / self.NFE
+
+        z1 = torch.randn_like(z0)
+        zs = z1
+
+        loss = 0
+        for _ in range(self.NFE):
+            # compute loss at time s
+            params = self.student_model(zs, s, cond)
+            pi = lambda x_t, t, cond: self.pi(x_t, t, cond, **params)
+            params_D = {k: v.detach() if isinstance(v, torch.Tensor) else v for k, v in params.items()}
+            pi_D = lambda x_t, t, cond: self.pi(x_t, t, cond, **params_D)
+
+            for iter_i in range(1, iter+1):
+                t = s - 1 / self.NFE * (iter_i / iter)
+                t = t.clamp(2*eps, 1).to(z0.device)
+                with torch.no_grad():
+                    zt = self.from_s_to_t(zs, s, t, cond, pi_D)
+                    vt = self.teacher_model(zt, t, cond)
+                vtheta = pi(zt, t, cond) 
+                loss = loss + F.mse_loss(vt, vtheta)
+
+            # update zs (s -> t)
+            zs = self.from_s_to_t(zs, s, s-1/self.NFE, cond, pi_D).detach()
+        loss = loss / iter / self.NFE
+        return loss
+
     @torch.no_grad()
     def sample_pi(self, x_s, cond):
         b = x_s.size(0)
@@ -190,10 +222,11 @@ if __name__ == "__main__":
     parser.add_argument("--NFE", type=int, default=4, help="number of NFE for student model")
     parser.add_argument("--K", type=int, default=8, help="number of Gaussian mixture components")
     parser.add_argument("--iter", type=int, default=2, help="number of analytical integration per training step")
+    parser.add_argument("--data_free", action="store_true", help="use data-free training")
     args = parser.parse_args()
 
-    result_dir = f"contents/{args.dataset}/NFE_{args.NFE}-K_{args.K}-iter_{args.iter}"
-    weight_dir = f"weights/{args.dataset}/NFE_{args.NFE}-K_{args.K}-iter_{args.iter}"
+    result_dir = f"contents/{args.dataset}/NFE_{args.NFE}-K_{args.K}-iter_{args.iter}-data_free_{args.data_free}"
+    weight_dir = f"weights/{args.dataset}/NFE_{args.NFE}-K_{args.K}-iter_{args.iter}-data_free_{args.data_free}"
     os.makedirs(weight_dir, exist_ok=True)
     os.makedirs(result_dir, exist_ok=True)
     
@@ -288,7 +321,10 @@ if __name__ == "__main__":
         for i, (x, c) in enumerate(train_dl):
             x, c = x.cuda(), c.cuda()
             optimizer.zero_grad()
-            loss = rf.forward_pi(x, c)
+            if args.data_free:
+                loss = rf.forward_pi_data_free(x, c)
+            else:
+                loss = rf.forward_pi(x, c)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(rf.student_model.parameters(), 1e2)
             optimizer.step()

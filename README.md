@@ -29,9 +29,11 @@ Run
 ```bash
 # MNIST (NFE=4)
 python3 train.py --dataset mnist --NFE 4 
+python3 train.py --dataset mnist --NFE 4 --data_free # distillation w/o train data 
 
-# CIFAR-10 (NFE=8)
+# CIFAR-10 (NFE=4)
 python3 train.py --dataset cifar --NFE 4
+python3 train.py --dataset cifar --NFE 4 --data_free # distillation w/o train data 
 ```
 
 > Note: training with NFE=1 tends to be unstable.

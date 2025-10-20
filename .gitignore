@@ -3,5 +3,7 @@ __pycache__
 wandb
 weights/
 logs/
-contents/cifar/
+contents/
+!contents/mnist/NFE_4-K_8-iter_2
 weights/cifar/
+run.sh
