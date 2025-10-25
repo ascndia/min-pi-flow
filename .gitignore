@@ -7,3 +7,4 @@ contents/
 !contents/mnist/NFE_4-K_8-iter_2
 weights/cifar/
 run.sh
+samples/

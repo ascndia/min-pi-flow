@@ -88,6 +88,8 @@ if __name__ == "__main__":
     from torchvision import datasets, transforms
     from torchvision.utils import make_grid
     from tqdm import tqdm
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     try:
         import wandb
@@ -105,8 +107,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=256)
     args = parser.parse_args()
 
-    result_dir = f"contents/{args.dataset}/epoch_{args.epochs}-batch-size_{args.batch_size}-attn_{args.attn}-iter_{args.iter}"
-    weight_dir = f"weights/{args.dataset}/epoch_{args.epochs}-batch-size_{args.batch_size}-attn_{args.attn}-iter_{args.iter}"
+    result_dir = f"contents/{args.dataset}/epoch_{args.epochs}-batch-size_{args.batch_size}-attn_{args.attn}-iter_{args.iter}-{timestamp}"
+    weight_dir = f"weights/{args.dataset}/epoch_{args.epochs}-batch-size_{args.batch_size}-attn_{args.attn}-iter_{args.iter}-{timestamp}"
     os.makedirs(weight_dir, exist_ok=True)
     os.makedirs(result_dir, exist_ok=True)
     
@@ -129,8 +131,9 @@ if __name__ == "__main__":
         )
         channels = 3
         patch_size = 2
+        num_classes = 10
         model = DiT_Llama(
-            channels, 32, dim=128, n_layers=10, n_heads=8, num_classes=10, patch_size=patch_size
+            channels, 32, dim=128, n_layers=10, n_heads=8, num_classes=num_classes, patch_size=patch_size
         ).cuda()
 
     elif args.dataset == "mnist":
@@ -144,15 +147,16 @@ if __name__ == "__main__":
         )
         channels = 1
         patch_size = 2
+        num_classes = 10
         model = DiT_Llama(
-            channels, 32, dim=64, n_layers=6, n_heads=4, num_classes=10, patch_size=patch_size
+            channels, 32, dim=64, n_layers=6, n_heads=4, num_classes=num_classes, patch_size=patch_size
         ).cuda()
 
     elif args.dataset == "celeba_hq":
         data_path = "data/celeba_hq_256"  # path to your flat folder
         transform = transforms.Compose([
-            transforms.Resize(256),          # keep original 256x256 or downsample
-            transforms.CenterCrop(256),
+            transforms.Resize(128),          # keep original 128x128 or downsample
+            transforms.CenterCrop(128),
             transforms.ToTensor(),
             transforms.Normalize([0.5]*3, [0.5]*3),
         ])
@@ -161,9 +165,20 @@ if __name__ == "__main__":
         patch_size = 4  
         num_classes = 1     
         model = DiT_Llama(
-            channels, 256, dim=128, n_layers=12, n_heads=8, num_classes=num_classes, patch_size=patch_size
-        ).cuda()
+        in_channels=3,
+        input_size=128,
+        patch_size=4,
+        dim=1024,
+        n_layers=16,
+        n_heads=16,
+        num_classes=1,  # unconditional
+    ).cuda()
 
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print(f"Total parameters: {total_params:,}")
+    print(f"Trainable parameters: {trainable_params:,}")
 
     rf = Flow(model, iter=args.iter)
     if args.dataset in ["mnist", "cifar"]:
@@ -178,18 +193,24 @@ if __name__ == "__main__":
     # train model (if there is no model checkpoint)
     optimizer = optim.Adam(rf.model.parameters(), lr=5e-4)
     scaler = torch.amp.GradScaler()  # optional for bf16
+    global_step = 0
     for epoch in range(args.epochs):
         loop = tqdm(train_dl, desc=f"Epoch {epoch+1}/{args.epochs}")
-        for x, c in train_dl:
+        for x, c in loop:
             x, c = x.cuda(), c.cuda()
             optimizer.zero_grad()
+            # bf16
             with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
                 loss = rf.forward_fm(x, c)
             loss.backward()
             optimizer.step()
-            loop.set_postfix(loss=loss.item())
+            # increment step
+            global_step += 1
+            # update tqdm with step & loss
+            loop.set_postfix(loss=loss.item(), step=global_step)
+            # log to wandb with global step
             if is_wandb_available:
-                wandb.log({"loss": loss.item()})
+                wandb.log({"loss": loss.item()}, step=global_step)
     torch.save(rf.model.state_dict(), f"{weight_dir}/model.pth")
 
     # Determine input shape and conditioning based on dataset
@@ -203,8 +224,8 @@ if __name__ == "__main__":
         B = 16
         channels = 3
         # Use attributes if model is conditional; else zeros for unconditional
-        if model.num_classes > 1:  # assume num_classes=40 for CelebA-HQ attributes
-            cond = torch.zeros(B, model.num_classes, dtype=torch.float).cuda()  # replace with attribute tensor if available
+        if num_classes > 1:  # assume num_classes=40 for CelebA-HQ attributes
+            cond = torch.zeros(B, num_classes, dtype=torch.float).cuda()  # replace with attribute tensor if available
         else:
             cond = torch.zeros(B, dtype=torch.long).cuda()  # unconditional
     else:
