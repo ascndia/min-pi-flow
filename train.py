@@ -185,7 +185,15 @@ if __name__ == "__main__":
         train_ds = fdatasets(root="./data", train=True, download=True, transform=transform)
     else:
         train_ds = fdatasets
-    train_dl = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, drop_last=True)
+    train_dl = DataLoader(
+        train_ds, 
+        batch_size=args.batch_size, 
+        shuffle=True, drop_last=True,     
+        num_workers=4,      # <--- use multiple CPU workers
+        pin_memory=True,              # <--- faster CPU→GPU transfers
+        persistent_workers=True,      # <--- avoids respawning processes each epoch
+        prefetch_factor=2 
+    )
 
     if is_wandb_available:
         wandb.init(project=f"flow", name=f"{args.dataset}_epoch_{args.epochs}-batch-size_{args.batch_size}_attn_{args.attn}-iter_{args.iter}")
