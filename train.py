@@ -6,7 +6,8 @@
 import argparse
 import torch
 import torch.nn.functional as F
-
+import transformer_engine.pytorch as te
+from transformer_engine.common import recipe
 import torch
 from torch.utils.data import Dataset
 from PIL import Image
@@ -203,7 +204,7 @@ if __name__ == "__main__":
         n_heads=16,
         num_classes=1,  # unconditional
     ).cuda()
-
+    model = model.to(dtype=torch.bfloat16)
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -231,15 +232,22 @@ if __name__ == "__main__":
     # train model (if there is no model checkpoint)
     optimizer = optim.Adam(rf.model.parameters(), lr=5e-4)
     scaler = torch.amp.GradScaler()  # optional for bf16
+    fp8_recipe = recipe.NVFP4BlockScaling()
     global_step = 0
     for epoch in range(args.epochs):
         loop = tqdm(train_dl, desc=f"Epoch {epoch+1}/{args.epochs}")
         for x, c in loop:
-            x, c = x.cuda(), c.cuda()
+            x = x.cuda().to(dtype=torch.bfloat16)
+            c = c.cuda().to(dtype=torch.bfloat16)
             optimizer.zero_grad()
-            # bf16
-            with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
-                loss = rf.forward_fm(x, c)
+            with te.fp8_autocast(enabled=True, fp8_recipe=fp8_recipe):
+            # Inner context ensures standard nn.Modules run correctly in BF16
+                with torch.amp.autocast(enabled=True, dtype=torch.bfloat16, device_type='cuda'):
+                    # Your model's forward pass runs here.
+                    # - init_conv_seq (nn.Conv2d etc.) runs in BF16 via torch.amp
+                    # - te.Linear, te.LayerNormMLP run in FP8/NVFP4 via te.fp8_autocast
+                    # - Attention runs in BF16 via torch.amp
+                    loss = rf.forward_fm(x, c)
             loss.backward()
             optimizer.step()
             # increment step
