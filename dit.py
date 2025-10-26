@@ -232,7 +232,6 @@ class FinalLayer(nn.Module):
         x = self.linear(x)
         return x
 
-
 class DiT_Llama(nn.Module):
     def __init__(
         self,
@@ -376,10 +375,3 @@ class DiT_Llama(nn.Module):
         freqs_cis = torch.polar(torch.ones_like(freqs), freqs)
         return freqs_cis
 
-
-def DiT_Llama_600M_patch2(**kwargs):
-    return DiT_Llama(patch_size=2, dim=256, n_layers=16, n_heads=32, **kwargs)
-
-
-def DiT_Llama_3B_patch2(**kwargs):
-    return DiT_Llama(patch_size=2, dim=3072, n_layers=32, n_heads=32, **kwargs)

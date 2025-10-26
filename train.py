@@ -78,6 +78,34 @@ def tensors_to_gif(images):
         gif.append(Image.fromarray(img))
     return gif
 
+
+def sample_and_save(dataset, rf : Flow, args, result_dir, num_classes):   
+    # Determine input shape and conditioning based on dataset
+    if dataset in ["mnist", "cifar"]:
+        H = W = 32
+        B = 16
+        cond = torch.arange(0, B).cuda() % 10  # class labels
+        channels = 1 if dataset == "mnist" else 3
+    elif dataset == "celeba_hq":
+        H = W = 256
+        B = 16
+        channels = 3
+        cond = torch.zeros(B, dtype=torch.long).cuda()  # unconditional
+    else:
+        raise ValueError(f"Dataset {dataset} not supported for sampling")
+
+    # Initialize noise
+    x_T = torch.randn(B, channels, H, W, generator=torch.Generator().manual_seed(42)).cuda()
+
+    # Sample from model
+    images = rf.sample_fm(x_T, cond, DDIM_NFE=50)
+
+    # Save to GIF / PNG
+    gif = tensors_to_gif(images)
+    gif[0].save(f"{result_dir}/sample_fm.gif", save_all=True, append_images=gif[1:], duration=100, loop=0)
+    gif[-1].save(f"{result_dir}/sample_fm_last.png")
+    return
+    
 if __name__ == "__main__":
     # train class conditional RF on mnist.
     import os
@@ -105,6 +133,8 @@ if __name__ == "__main__":
     parser.add_argument("--iter", type=int, default=2, help="number of analytical integration per training step")
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--sample_interval", type=int, default=500, help="interval between image samples")
+    parser.add_argument("--save_interval", type=int, default=5, help="interval between model saves")
     args = parser.parse_args()
 
     result_dir = f"contents/{args.dataset}/epoch_{args.epochs}-batch-size_{args.batch_size}-attn_{args.attn}-iter_{args.iter}-{timestamp}"
@@ -217,36 +247,12 @@ if __name__ == "__main__":
             # update tqdm with step & loss
             loop.set_postfix(loss=loss.item(), step=global_step)
             # log to wandb with global step
+            if global_step % args.sample_interval == 0:
+                sample_and_save(rf=rf, dataset=args.dataset, args=args, result_dir=result_dir, num_classes=num_classes)
+            if epoch % args.save_interval == 0 and global_step == len(train_dl):
+                torch.save(rf.model.state_dict(), f"{weight_dir}/model_epoch_{epoch+1}.pth")
             if is_wandb_available:
                 wandb.log({"loss": loss.item()}, step=global_step)
-    torch.save(rf.model.state_dict(), f"{weight_dir}/model.pth")
+    torch.save(rf.model.state_dict(), f"{weight_dir}/final_model.pth")
 
-    # Determine input shape and conditioning based on dataset
-    if args.dataset in ["mnist", "cifar"]:
-        H = W = 32
-        B = 16
-        cond = torch.arange(0, B).cuda() % 10  # class labels
-        channels = 1 if args.dataset == "mnist" else 3
-    elif args.dataset == "celeba_hq":
-        H = W = 256
-        B = 16
-        channels = 3
-        # Use attributes if model is conditional; else zeros for unconditional
-        if num_classes > 1:  # assume num_classes=40 for CelebA-HQ attributes
-            cond = torch.zeros(B, num_classes, dtype=torch.float).cuda()  # replace with attribute tensor if available
-        else:
-            cond = torch.zeros(B, dtype=torch.long).cuda()  # unconditional
-    else:
-        raise ValueError(f"Dataset {args.dataset} not supported for sampling")
-
-    # Initialize noise
-    x_T = torch.randn(B, channels, H, W, generator=torch.Generator().manual_seed(42)).cuda()
-
-    # Sample from model
-    images = rf.sample_fm(x_T, cond, DDIM_NFE=50)
-
-    # Save to GIF / PNG
-    gif = tensors_to_gif(images)
-    gif[0].save(f"{result_dir}/sample_fm.gif", save_all=True, append_images=gif[1:], duration=100, loop=0)
-    gif[-1].save(f"{result_dir}/sample_fm_last.png")
-
+    sample_and_save(rf=rf, dataset=args.dataset, args=args, result_dir=result_dir, num_classes=num_classes)
