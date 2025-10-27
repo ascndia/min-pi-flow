@@ -68,10 +68,10 @@ class Flow:
             # Ensure x_t is bfloat16 before entering the model
             x_t = x_t.to(dtype=torch.bfloat16)
             # Ensure cond is also the correct dtype if it's used by the model directly
-            cond = cond.to(dtype=torch.bfloat16) # Or keep as long if used for embedding lookup
+            # cond = cond.to(dtype=torch.bfloat16) # Or keep as long if used for embedding lookup
 
             # --- FIX: Add torch.amp.autocast ---
-            with autocast(enabled=True, dtype=torch.bfloat16, device_type='cuda'):
+            with torch.amp.autocast(enabled=True, dtype=torch.bfloat16, device_type='cuda'):
                 # Model call happens inside BF16 autocast context
                 # self.model expects BF16 inputs for its parameters now
                 v_t = self.model(x_t, t_tensor, cond) # Pass the tensor 't_tensor'
@@ -99,7 +99,7 @@ def tensors_to_gif(images):
         gif.append(Image.fromarray(img))
     return gif
 
-def sample_and_save(dataset, rf : Flow, args, result_dir, num_classes):
+def sample_and_save(dataset, rf : Flow, args, result_dir, num_classes, current_epoch=None, current_step=None):
     # Determine input shape and conditioning...
     if dataset in ["mnist", "cifar"]:
         H = W = 32
@@ -148,10 +148,10 @@ def sample_and_save(dataset, rf : Flow, args, result_dir, num_classes):
                  gif_frames.append(img_pil)
 
              if gif_frames:
-                 gif_frames[0].save(f"{result_dir}/sample_fm_epoch{args.current_epoch}_step{args.current_step}.gif", # Add epoch/step
+                 gif_frames[0].save(f"{result_dir}/sample_fm_epoch{current_epoch}_step{current_step}.gif", # Add epoch/step
                                     save_all=True, append_images=gif_frames[1:],
                                     duration=150, loop=0) # Adjust duration
-                 gif_frames[-1].save(f"{result_dir}/sample_fm_epoch{args.current_epoch}_step{args.current_step}_last.png") # Add epoch/step
+                 gif_frames[-1].save(f"{result_dir}/sample_fm_epoch{current_epoch}_step{current_step}_last.png") # Add epoch/step
                  print(f"Saved sample GIF and PNG to {result_dir}")
 
         except Exception as e:
@@ -196,8 +196,8 @@ if __name__ == "__main__":
     parser.add_argument("--iter", type=int, default=2, help="number of analytical integration per training step")
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch_size", type=int, default=256)
-    parser.add_argument("--sample_interval", type=int, default=500, help="interval between image samples")
-    parser.add_argument("--save_interval", type=int, default=5, help="interval between model saves")
+    parser.add_argument("--sample_interval", type=int, default=2000, help="interval between image samples")
+    parser.add_argument("--save_interval", type=int, default=5000, help="interval between model saves")
     args = parser.parse_args()
 
     result_dir = f"contents/{args.dataset}/epoch_{args.epochs}-batch-size_{args.batch_size}-attn_{args.attn}-iter_{args.iter}-{timestamp}"
@@ -311,11 +311,11 @@ if __name__ == "__main__":
             loop.set_postfix(loss=loss.item(), step=global_step)
             # log to wandb with global step
             if global_step % args.sample_interval == 0:
-                sample_and_save(rf=rf, dataset=args.dataset, args=args, result_dir=result_dir, num_classes=num_classes)
+                sample_and_save(rf=rf, dataset=args.dataset, args=args, result_dir=result_dir, num_classes=num_classes, current_epoch=epoch+1, current_step=global_step)
             if epoch % args.save_interval == 0 and global_step == len(train_dl):
                 torch.save(rf.model.state_dict(), f"{weight_dir}/model_epoch_{epoch+1}.pth")
             if is_wandb_available:
                 wandb.log({"loss": loss.item()}, step=global_step)
     torch.save(rf.model.state_dict(), f"{weight_dir}/final_model.pth")
 
-    sample_and_save(rf=rf, dataset=args.dataset, args=args, result_dir=result_dir, num_classes=num_classes)
+    sample_and_save(rf=rf, dataset=args.dataset, args=args, result_dir=result_dir, num_classes=num_classes, current_epoch=args.epochs, current_step=global_step)

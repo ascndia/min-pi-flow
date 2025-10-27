@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-#from favor import Attention
+from favor import Attention
 
 def exists(val):
     return val is not None
@@ -14,70 +14,70 @@ def exists(val):
 def default(val, d):
     return val if exists(val) else d
 
-class Attention(nn.Module):
-    def __init__(self, dim, n_heads, dim_head):
-        super().__init__()
-        self.n_heads = n_heads
-        self.n_rep = 1
-        assert dim % n_heads == 0, 'dimension must be divisible by number of heads'
-        dim_head = default(dim_head, dim // n_heads)
-        self.head_dim = dim_head
+# class Attention(nn.Module):
+#     def __init__(self, dim, n_heads, dim_head):
+#         super().__init__()
+#         self.n_heads = n_heads
+#         self.n_rep = 1
+#         assert dim % n_heads == 0, 'dimension must be divisible by number of heads'
+#         dim_head = default(dim_head, dim // n_heads)
+#         self.head_dim = dim_head
 
-        self.wq = nn.Linear(dim, n_heads * self.head_dim, bias=False)
-        self.wk = nn.Linear(dim, self.n_heads * self.head_dim, bias=False)
-        self.wv = nn.Linear(dim, self.n_heads * self.head_dim, bias=False)
-        self.wo = nn.Linear(n_heads * self.head_dim, dim, bias=False)
+#         self.wq = nn.Linear(dim, n_heads * self.head_dim, bias=False)
+#         self.wk = nn.Linear(dim, self.n_heads * self.head_dim, bias=False)
+#         self.wv = nn.Linear(dim, self.n_heads * self.head_dim, bias=False)
+#         self.wo = nn.Linear(n_heads * self.head_dim, dim, bias=False)
 
-        self.q_norm = nn.LayerNorm(self.n_heads * self.head_dim)
-        self.k_norm = nn.LayerNorm(self.n_heads * self.head_dim)
+#         self.q_norm = nn.LayerNorm(self.n_heads * self.head_dim)
+#         self.k_norm = nn.LayerNorm(self.n_heads * self.head_dim)
 
-    @staticmethod
-    def reshape_for_broadcast(freqs_cis, x):
-        ndim = x.ndim
-        assert 0 <= 1 < ndim
-        # assert freqs_cis.shape == (x.shape[1], x.shape[-1])
-        _freqs_cis = freqs_cis[: x.shape[1]]
-        shape = [d if i == 1 or i == ndim - 1 else 1 for i, d in enumerate(x.shape)]
-        return _freqs_cis.view(*shape)
+#     @staticmethod
+#     def reshape_for_broadcast(freqs_cis, x):
+#         ndim = x.ndim
+#         assert 0 <= 1 < ndim
+#         # assert freqs_cis.shape == (x.shape[1], x.shape[-1])
+#         _freqs_cis = freqs_cis[: x.shape[1]]
+#         shape = [d if i == 1 or i == ndim - 1 else 1 for i, d in enumerate(x.shape)]
+#         return _freqs_cis.view(*shape)
 
-    @staticmethod
-    def apply_rotary_emb(xq, xk, freqs_cis):
-        xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
-        xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
-        freqs_cis_xq = Attention.reshape_for_broadcast(freqs_cis, xq_)
-        freqs_cis_xk = Attention.reshape_for_broadcast(freqs_cis, xk_)
+#     @staticmethod
+#     def apply_rotary_emb(xq, xk, freqs_cis):
+#         xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
+#         xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
+#         freqs_cis_xq = Attention.reshape_for_broadcast(freqs_cis, xq_)
+#         freqs_cis_xk = Attention.reshape_for_broadcast(freqs_cis, xk_)
 
-        xq_out = torch.view_as_real(xq_ * freqs_cis_xq).flatten(3)
-        xk_out = torch.view_as_real(xk_ * freqs_cis_xk).flatten(3)
-        return xq_out, xk_out
+#         xq_out = torch.view_as_real(xq_ * freqs_cis_xq).flatten(3)
+#         xk_out = torch.view_as_real(xk_ * freqs_cis_xk).flatten(3)
+#         return xq_out, xk_out
 
-    def forward(self, x, freqs_cis):
-        bsz, seqlen, _ = x.shape
+#     def forward(self, x, freqs_cis):
+#         bsz, seqlen, _ = x.shape
 
-        xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
+#         xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
 
-        dtype = xq.dtype
+#         dtype = xq.dtype
 
-        xq = self.q_norm(xq)
-        xk = self.k_norm(xk)
+#         xq = self.q_norm(xq)
+#         xk = self.k_norm(xk)
 
-        xq = xq.view(bsz, seqlen, self.n_heads, self.head_dim)
-        xk = xk.view(bsz, seqlen, self.n_heads, self.head_dim)
-        xv = xv.view(bsz, seqlen, self.n_heads, self.head_dim)
+#         xq = xq.view(bsz, seqlen, self.n_heads, self.head_dim)
+#         xk = xk.view(bsz, seqlen, self.n_heads, self.head_dim)
+#         xv = xv.view(bsz, seqlen, self.n_heads, self.head_dim)
 
-        xq, xk = self.apply_rotary_emb(xq, xk, freqs_cis=freqs_cis)
-        xq, xk = xq.to(dtype), xk.to(dtype)
+#         xq, xk = self.apply_rotary_emb(xq, xk, freqs_cis=freqs_cis)
+#         xq, xk = xq.to(dtype), xk.to(dtype)
 
-        output = F.scaled_dot_product_attention(
-            xq.permute(0, 2, 1, 3),
-            xk.permute(0, 2, 1, 3),
-            xv.permute(0, 2, 1, 3),
-            dropout_p=0.0,
-            is_causal=False,
-        ).permute(0, 2, 1, 3)
-        output = output.flatten(-2)
+#         output = F.scaled_dot_product_attention(
+#             xq.permute(0, 2, 1, 3),
+#             xk.permute(0, 2, 1, 3),
+#             xv.permute(0, 2, 1, 3),
+#             dropout_p=0.0,
+#             is_causal=False,
+#         ).permute(0, 2, 1, 3)
+#         output = output.flatten(-2)
 
-        return self.wo(output)
+#         return self.wo(output)
 
 
 
